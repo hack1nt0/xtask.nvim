@@ -1,0 +1,4 @@
+{
+    "compile": "make all",
+    "runner": "python3 ../xtests.py ."
+}
