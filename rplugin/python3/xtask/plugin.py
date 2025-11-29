@@ -49,18 +49,15 @@ class Plugin(object):
         self.nvim.funcs.rpcnotify(guid, method, *args)
         # self.nvim.out_write(f'{pprint.pformat(args, indent=2)}\n')
 
+    def _request(self, guid, method, *args):
+        return self.nvim.funcs.rpcrequest(guid, method, *args)
+
     def _error(self, guid, *args):
         self.nvim.funcs.rpcnotify(guid, 'XtaskError', *args)
     
     def _debug(self, k, v):
         self.nvim.out_write(f'{k} = {pprint.pformat(v, indent=2)}\n')
 
-    def _request(self, method, *args):
-        guid = self.guid
-        if guid:
-            return self.nvim.funcs.rpcrequest(guid, method, *args)
-        else:
-            return None
 
     @pynvim.function('XtaskNew', sync=True)
     def XtaskNew(self, args):
