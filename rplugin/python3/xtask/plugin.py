@@ -25,7 +25,9 @@ class Plugin(object):
         self.nvim.out_write('testplugin is in ' + filename + '\n')
 
     @property
-    def cwd(self) -> bool: return os.path.dirname(os.path.expanduser(self.nvim.current.buffer.name))
+    def cwd(self) -> str: 
+        # return os.path.dirname(os.path.expanduser(self.nvim.current.buffer.name))
+        return self.nvim.command_output('pwd')
 
     @property
     def headless(self) -> bool: return self.guid is not None
@@ -112,11 +114,14 @@ class Plugin(object):
         try:
             guid = int(args[0])
             fname = os.path.join(self.cwd, 'xtask.json')
-            oldxinfo = open(fname).read()
-            newxinfo = self._request('XtaskEdit', oldxinfo)
-            if newxinfo is None: return
-            if newxinfo != oldxinfo: update_xinfo(self.cwd)
-            self._respond(guid, 'XtaskEdit')
+            if os.path.exists(fname):
+                oldxinfo = open(fname).read()
+                newxinfo = self._request(guid, 'XtaskEdit', oldxinfo)
+                if newxinfo is None: return
+                if newxinfo != oldxinfo: update_xinfo(self.cwd)
+                self._respond(guid, 'XtaskEdit')
+            else:
+                self._error(guid, 'Current directory is not a xtask..')
         except Exception as e:
             self._error(guid, e)
 
@@ -129,8 +134,8 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
-    @pynvim.function('XtaskRemove')
-    def XtaskRemove(self, args):
+    @pynvim.function('XtaskDel')
+    def XtaskDel(self, args):
         try:
             guid = int(args[0])
             delete_task(self.cwd)
@@ -249,8 +254,25 @@ class Plugin(object):
         try:
             self._debug('task', args)
             guid = int(args[0])
-            cmd = ' '.join(args[1:])
+            cmd = ' && '.join(args[1:])
             self.nvim.command(f'terminal {cmd}')
+        except Exception as e:
+            self._error(guid, e)
+        
+
+    @pynvim.function('XtaskSync')
+    def XtaskSync(self, args):
+        try:
+            self._debug('task', args)
+            guid = int(args[0])
+            # hostname = conf['hostname']
+            # username = conf['username']
+            # password = self._request('XtaskSync', hostname, username)
+            # import requests
+            gitrepo = conf['gitrepo']
+            gitrepo = self._request('XtaskSync', gitrepo)
+            self.XtaskTask([guid, f'git remote set-url origin {gitrepo}', 'git push'])
+            self.nvim.command_(f'terminal {cmd}')
         except Exception as e:
             self._error(guid, e)
         
