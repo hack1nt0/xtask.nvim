@@ -248,7 +248,7 @@ class Plugin(object):
         global conf
         p = conf['termw%']
         w = int(cols * p)
-        h = rows - 2
+        h = rows - 4
         x = cols - w
         y = 0
         return {
@@ -277,7 +277,7 @@ class Plugin(object):
                         self.nvim.command('terminal')
                 self._term_winid = self.nvim.api.open_win(self._term_bufid, True, self.winopts(title='Terminal'))
             elif not on:
-                self.nvim.api.hide_win(self._term_winid)
+                self.nvim.api.win_hide(self._term_winid)
         except Exception as e:
             self._error(guid, e)
 
