@@ -72,6 +72,7 @@ class Plugin(object):
 
     @pynvim.function('XtaskConf')
     def XtaskConf(self, args):
+        global conf
         try:
             guid = int(args[0])
             # hostname = conf['hostname']
@@ -80,7 +81,6 @@ class Plugin(object):
             # import requests
             newconf = self._request(guid, 'XtaskConf', conf)
             if newconf:
-                global conf
                 conf.update(newconf) #TODO
                 save_conf()
         except Exception as e:
@@ -245,6 +245,7 @@ class Plugin(object):
     def winopts(self, title='', footer=''):
         rows = int(self.nvim.options.get('columns', '30'))
         cols = int(self.nvim.options.get('lines', '20'))
+        global conf
         p = conf['termw%']
         w = cols * p
         h = rows
@@ -325,6 +326,7 @@ class Plugin(object):
 
     @pynvim.function('XtaskSync')
     def XtaskSync(self, args):
+        global conf
         try:
             guid = int(args[0])
             # hostname = conf['hostname']
