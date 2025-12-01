@@ -24,9 +24,9 @@ class Plugin(object):
             if self._term_winid == -1 or not self.nvim.api.win_is_valid(self._term_winid):
                 if self._term_bufid == -1 or not self.nvim.api.buf_is_valid(self._term_bufid):
                     self._term_bufid = self.nvim.api.create_buf(False, True)
-                    if self.nvim.api.get_option_value('buftype', {'buf': self._term_bufid}) != "terminal":
-                        self.nvim.command('terminal')
                 self._term_winid = self.nvim.api.open_win(self._term_bufid, True, self.winopts(title='Terminal'))
+                if self.nvim.api.get_option_value('buftype', {'buf': self._term_bufid}) != "terminal":
+                    self.nvim.command('terminal')
             else:
                 self.nvim.api.hide_win(self._term_winid)
         except Exception as e:
