@@ -10,6 +10,9 @@ class Plugin(object):
     def __init__(self, nvim:pynvim.Nvim):
         self.nvim = nvim
         self._lastbufid = None
+        self._term_winid = -1
+        self._term_bufid = -1
+        self._jobs_winid = -1
 
     @pynvim.function('TestFunction', sync=True)
     def testfunction(self, args):
@@ -17,8 +20,17 @@ class Plugin(object):
 
     @pynvim.command('TestCommand', nargs='*', range='')
     def testcommand(self, args, range):
-        self.nvim.current.line = ('Command with args: {}, range: {}'
-                                  .format(args, range))
+        try:
+            if not self.nvim.api.win_is_valid(self._term_winid):
+                if not self.nvim.api.buf_is_valid(self._term_bufid):
+                    self._term_bufid = self.nvim.api.create_buf(False, True)
+                    if self.nvim.api.get_option_value('buftype', {'buf': self._term_bufid}) != "terminal":
+                        self.nvim.command('terminal')
+                self._term_winid = self.nvim.api.open_win(self._term_bufid, True, self.winopts(title='Terminal'))
+            else:
+                self.nvim.api.hide_win(self._term_winid)
+        except Exception as e:
+            self._debug('error', e)
 
     @pynvim.autocmd('BufEnter', pattern='*.py', eval='expand("<afile>")', sync=True)
     def on_bufenter(self, filename):
@@ -28,10 +40,10 @@ class Plugin(object):
     def cwd(self) -> str: 
         # return os.path.dirname(os.path.expanduser(self.nvim.current.buffer.name))
         return self.nvim.command_output('pwd')
-
     @property
     def headless(self) -> bool: return self.guid is not None
-
+    @property
+    def current(self): return self.nvim.current.buffer.number
     @property
     def guid(self):
         chans = self.nvim.api.list_chans()
@@ -58,6 +70,48 @@ class Plugin(object):
     def _debug(self, k, v):
         self.nvim.out_write(f'{k} = {pprint.pformat(v, indent=2)}\n')
 
+    @pynvim.function('XtaskConf')
+    def XtaskConf(self, args):
+        try:
+            guid = int(args[0])
+            # hostname = conf['hostname']
+            # username = conf['username']
+            # password = self._request('XtaskSync', hostname, username)
+            # import requests
+            newconf = self._request(guid, 'XtaskConf', conf)
+            if newconf:
+                global conf
+                conf.update(newconf) #TODO
+                save_conf()
+        except Exception as e:
+            self._error(guid, e)
+
+    @pynvim.function('XtaskListFiles', sync=True)
+    def XtaskListFiles(self, args):
+        try:
+            guid = int(args[0])
+            dirpath = args[1]
+            self.nvim.command(f"lua require('telescope.builtin').find_files({dirpath})")
+        except Exception as e:
+            self._error(guid, e)
+
+    @pynvim.function('XtaskGrepFiles', sync=True)
+    def XtaskGrepFiles(self, args):
+        try:
+            guid = int(args[0])
+            dirpath = args[1]
+            self.nvim.command(f"lua require('telescope.builtin').live_grep({dirpath})")
+        except Exception as e:
+            self._error(guid, e)
+
+    @pynvim.function('XtaskListHelpFiles', sync=True)
+    def XtaskListHelpFiles(self, args):
+        try:
+            guid = int(args[0])
+            dirpath = args[1]
+            self.nvim.command("lua require('telescope.builtin').help_tags()")
+        except Exception as e:
+            self._error(guid, e)
 
     @pynvim.function('XtaskNew', sync=True)
     def XtaskNew(self, args):
@@ -98,7 +152,9 @@ class Plugin(object):
             guid = int(args[0])
             tasks = get_all_tasks()
             self._debug('tasks', tasks)
-            self._respond(guid, 'XtaskList', tasks)
+            dirpath = self._request(guid, 'XtaskList', tasks)
+            self.nvim.chdir(dirpath)
+            self.XtaskListFiles([guid, dirpath])
         except Exception as e:
             self._error(guid, e)
 
@@ -115,19 +171,14 @@ class Plugin(object):
                 oldxinfo = open(fname).read()
                 newxinfo = self._request(guid, 'XtaskEdit', oldxinfo)
                 if newxinfo is None: return
-                if newxinfo != oldxinfo: update_xinfo(self.cwd)
-                self._respond(guid, 'XtaskEdit')
+                needupd = newxinfo != oldxinfo
+                if needupd: 
+                    update_xinfo(self.cwd)
+                    self._respond(guid, 'XtaskEdit', needupd)
+                else:
+                    self._error(guid, 'Nothing changed..')
             else:
                 self._error(guid, 'Current directory is not a xtask..')
-        except Exception as e:
-            self._error(guid, e)
-
-    @pynvim.function('XtaskSpecify')
-    def XtaskSpecify(self, args):
-        try:
-            guid = int(args[0])
-            dirpath = args[1]
-            self.nvim.chdir(dirpath)
         except Exception as e:
             self._error(guid, e)
 
@@ -185,91 +236,104 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
     
-    @property
-    def terminal(self):
-        while True:
-            bufs = self.nvim.buffers
-            for buf in bufs:
-                if self._checkterm(buf.number):
-                    return buf.number
-            self.nvim.command('terminal')
-
-    @property
-    def current(self): return self.nvim.current.buffer.number
-
-    def _checkterm(self, bufid):
-        # self.nvim.funcs.bo[bufid].buftype == "terminal":
-        return self.nvim.api.get_option_value('buftype', {'buf': bufid}) == "terminal"
+    # def _checkterm(self, bufid):
+    #     # self.nvim.funcs.bo[bufid].buftype == "terminal":
     
-    def _getchannel(self, bufid):
-        # self.nvim.funcs.bo[bufid].buftype == "terminal":
-        return self.nvim.api.get_option_value('channel', {'buf': bufid})
+    # def _getchannel(self, bufid):
+    #     # self.nvim.funcs.bo[bufid].buftype == "terminal":
 
-    @pynvim.function('XtaskSwitch')
-    def XtaskSwitch(self, args):
+    def winopts(self, title='', footer=''):
+        rows = int(self.nvim.options.get('columns', '30'))
+        cols = int(self.nvim.options.get('lines', '20'))
+        p = conf['termw%']
+        w = cols * p
+        h = rows
+        x = cols - w
+        y = 0
+        return {
+            'relative': 'editor',
+            'width': w,
+            'height': h,
+            'col': x,
+            'row': y,
+            # 'style': 'minimal',
+            'border': [ "╔", "═" ,"╗", "║", "╝", "═", "╚", "║" ],
+            'title': title,
+            'title_pos': 'center',
+            'footer': footer,
+            'footer_pos': 'center',
+        }
+
+    @pynvim.function('XtaskToggleTerm')
+    def XtaskToggleTerm(self, args):
         try:
             guid = int(args[0])
-            termid = self.terminal
-            if self.current != termid:
-                self._lastbufid = self.current
-                self.nvim.command(f'b {termid}')
-            else:
-                if self._lastbufid is None or self._lastbufid == termid:
-                    self.nvim.command(f'bfirst')
-                else:
-                    self.nvim.command(f'b {self._lastbufid}')
+            on = len(args) < 2 or args[1]
+            if not self.nvim.api.win_is_valid(self._term_winid):
+                if not self.nvim.api.buf_is_valid(self._term_bufid):
+                    self._term_bufid = self.nvim.api.create_buf(False, True)
+                    if self.nvim.api.get_option_value('buftype', {'buf': self._term_bufid}) != "terminal":
+                        self.nvim.command('terminal')
+                self._term_winid = self.nvim.api.open_win(self._term_bufid, True, self.winopts(title='Terminal'))
+            elif not on:
+                self.nvim.api.hide_win(self._term_winid)
         except Exception as e:
             self._error(guid, e)
 
-    @pynvim.function('XtaskCmd')
-    def XtaskCmd(self, args):
+    @pynvim.function('XtaskRunCmd')
+    def XtaskRunCmd(self, args):
         try:
-            self._debug('cmd', args)
+            self._debug('XtaskRunCmd', args)
             guid = int(args[0])
-            cmd = ' '.join(args[1:])
-            termid = self.terminal
-            self.nvim.command(f'b {termid}')
-            chanid = self._getchannel(termid)
+            cmd = ' && '.join(args[1:])
+            self.XtaskToggleTerm([guid, True])
+            chanid = self.nvim.api.get_option_value('channel', {'buf': self._term_bufid})
             def cc():
                 return self.nvim.api.get_proc_children(self.nvim.call('jobpid', chanid))
             if not cc():
                 self.nvim.api.chan_send(chanid, f'{cmd}\n') #Send a command and newline to execute it
-                tic = time.time_ns()
-                while True:
-                    time.sleep(0.1)
-                    if not cc():
-                        toc = time.time_ns()
-                        tot = round((toc - tic) / 1e9, 2)
-                        self._respond(guid, 'XtaskCmd', cmd, 'finished in {tot} seconds')
             else:
-                self._error(guid, "A job is running\nUse `task` instead..")
+                self._error(guid, "Terminal is busy..\nUse `Job` instead")
         except Exception as e:
             self._error(guid, e)
     
-    @pynvim.function('XtaskTask')
-    def XtaskTask(self, args):
+    @pynvim.function('XtaskRunJob')
+    def XtaskRunJob(self, args):
         try:
-            self._debug('task', args)
             guid = int(args[0])
             cmd = ' && '.join(args[1:])
+            if self.nvim.api.win_is_valid(self._jobs_winid):
+                self.nvim.api.hide_win(self._jobs_winid)
+            bufid = self.nvim.api.create_buf(False, True)
             self.nvim.command(f'terminal {cmd}')
+            self._jobs_winid = self.nvim.api.open_win(bufid, True, self.winopts(title=f'Job #{bufid}', footer=f'[{cmd}]'))
         except Exception as e:
             self._error(guid, e)
         
+    @pynvim.function('XtaskListJobs')
+    def XtaskListJobs(self, args):
+        try:
+            guid = int(args[0])
+            bufid, cmd = self._request(guid, 'XtaskListJobs', self.nvim.command_output('ls'))
+            if bufid is not None:
+                if self.nvim.api.win_is_valid(self._jobs_winid):
+                    self.nvim.api.hide_win(self._jobs_winid)
+                self._jobs_winid = self.nvim.api.open_win(bufid, True, self.winopts(title=f'Job #{bufid}', footer=f'[{cmd}]'))
+        except Exception as e:
+            self._error(guid, e)
+
 
     @pynvim.function('XtaskSync')
     def XtaskSync(self, args):
         try:
-            self._debug('task', args)
             guid = int(args[0])
             # hostname = conf['hostname']
             # username = conf['username']
             # password = self._request('XtaskSync', hostname, username)
             # import requests
             gitrepo = conf['gitrepo']
-            gitrepo = self._request('XtaskSync', gitrepo)
-            self.XtaskTask([guid, f'git remote set-url origin {gitrepo}', 'git push'])
-            self.nvim.command_(f'terminal {cmd}')
+            gitbranch = conf['gitrepo']
+            self.XtaskRunJob([guid, f'git remote set-url origin {gitrepo}', f'git push origin {gitbranch}'])
         except Exception as e:
             self._error(guid, e)
         

@@ -1,4 +1,13 @@
 {
-    "compile": "make all",
-    "runner": "python3 ../xtests.py ."
+    "compilecmd": "make all",
+    "runtestcmd": "make test",
+    "comparecmd": "make comp",
+    "interactor": "make interact",
+    "languages": {
+        ".cpp":""
+    },
+    ".cpp": "",
+    "termw%": 0.35,
+    "gitrepo": "git@github.com:hack1nt0/xtask.archive.git",
+    "gitbranch": "main"
 }
