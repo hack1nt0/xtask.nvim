@@ -243,12 +243,12 @@ class Plugin(object):
     #     # self.nvim.funcs.bo[bufid].buftype == "terminal":
 
     def winopts(self, title='', footer=''):
-        rows = int(self.nvim.options.get('columns', '30'))
-        cols = int(self.nvim.options.get('lines', '20'))
+        rows = int(self.nvim.options.get('lines', '20'))
+        cols = int(self.nvim.options.get('columns', '30'))
         global conf
         p = conf['termw%']
         w = int(cols * p)
-        h = rows
+        h = rows - 2
         x = cols - w
         y = 0
         return {
