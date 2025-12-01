@@ -247,7 +247,7 @@ class Plugin(object):
         cols = int(self.nvim.options.get('lines', '20'))
         global conf
         p = conf['termw%']
-        w = cols * p
+        w = int(cols * p)
         h = rows
         x = cols - w
         y = 0
