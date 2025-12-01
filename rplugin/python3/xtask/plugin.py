@@ -21,8 +21,8 @@ class Plugin(object):
     @pynvim.command('TestCommand', nargs='*', range='')
     def testcommand(self, args, range):
         try:
-            if not self.nvim.api.win_is_valid(self._term_winid):
-                if not self.nvim.api.buf_is_valid(self._term_bufid):
+            if self._term_winid == -1 or not self.nvim.api.win_is_valid(self._term_winid):
+                if self._term_bufid == -1 or not self.nvim.api.buf_is_valid(self._term_bufid):
                     self._term_bufid = self.nvim.api.create_buf(False, True)
                     if self.nvim.api.get_option_value('buftype', {'buf': self._term_bufid}) != "terminal":
                         self.nvim.command('terminal')
