@@ -57,6 +57,13 @@ class Plugin(object):
         self._debug('res', res)
         return res
 
+    @pynvim.function('XtaskGetChanId')
+    def XtaskGetChanId(self, args):
+        try:
+            return self.nvim.channel_id
+        except Exception as e:
+            self._debug('error', e)
+
     def _respond(self, guid, method, *args):
         self.nvim.funcs.rpcnotify(guid, method, *args)
         # self.nvim.out_write(f'{pprint.pformat(args, indent=2)}\n')
