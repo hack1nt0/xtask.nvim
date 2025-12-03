@@ -59,7 +59,7 @@ class Plugin(object):
 
     @pynvim.command('XtaskGetChanId', nargs='*', range='')
     def XtaskGetChanId(self, args, range):
-        self._debug('xtask.channel_id', self.nvim.channel_id)
+        self.nvim.out_write(str(self.nvim.channel_id))
 
     @pynvim.function('xtaskgetchanid')
     def xtaskgetchanid(self, args):
