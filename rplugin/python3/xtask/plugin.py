@@ -57,8 +57,15 @@ class Plugin(object):
         self._debug('res', res)
         return res
 
-    @pynvim.function('XtaskGetChanId')
+    @pynvim.command('XtaskGetChanId')
     def XtaskGetChanId(self, args):
+        try:
+            return self.nvim.channel_id
+        except Exception as e:
+            self._debug('error', e)
+
+    @pynvim.function('xtaskgetchanid')
+    def xtaskgetchanid(self, args):
         try:
             return self.nvim.channel_id
         except Exception as e:
