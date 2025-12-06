@@ -112,7 +112,7 @@ class Plugin(object):
             os.chdir(dirpath)
             files = []
             for filename in glob.iglob('**/*', recursive=True):
-                if not os.path.isdir(filename): continue
+                if os.path.isdir(filename): continue
                 st = os.stat(filename)
                 files.append((filename, st.st_size, st.st_mode, st.st_ctime, st.st_mtime, st.st_atime))
             self._respond(guid, 'XtaskListFiles', files)
