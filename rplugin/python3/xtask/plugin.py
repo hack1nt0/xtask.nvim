@@ -94,12 +94,29 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
+    # @pynvim.function('XtaskListFiles', sync=True)
+    # def XtaskListFiles(self, args):
+    #     try:
+    #         guid = int(args[0])
+    #         dirpath = args[1]
+    #         self.nvim.command(f"lua require('telescope.builtin').find_files({dirpath})")
+    #     except Exception as e:
+    #         self._error(guid, e)
+
     @pynvim.function('XtaskListFiles', sync=True)
     def XtaskListFiles(self, args):
         try:
-            guid = int(args[0])
-            dirpath = args[1]
-            self.nvim.command(f"lua require('telescope.builtin').find_files({dirpath})")
+            guid, dirpath = args
+            dirpath = os.path.expanduser(dirpath)
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+            files = []
+            for filename in glob.iglob('**/*', recursive=True):
+                if not os.path.isdir(filename): continue
+                st = os.stat(filename)
+                files.append((filename, st.st_size, st.st_mode, st.st_ctime, st.st_mtime, st.st_atime))
+            self._respond(guid, 'XtaskListFiles', files)
+            os.chdir(cwd)
         except Exception as e:
             self._error(guid, e)
 
@@ -154,15 +171,32 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
-    @pynvim.function('XtaskList')
-    def XtaskList(self, args):
+    # @pynvim.function('XtaskList')
+    # def XtaskList(self, args):
+    #     try:
+    #         guid = int(args[0])
+    #         tasks = get_all_tasks()
+    #         self._debug('tasks', tasks)
+    #         dirpath = self._request(guid, 'XtaskList', tasks)
+    #         self.nvim.chdir(dirpath)
+    #         self.XtaskListFiles([guid, dirpath])
+    #     except Exception as e:
+    #         self._error(guid, e)
+
+    @pynvim.function('XtaskListTasks')
+    def XtaskListTasks(self, args):
         try:
-            guid = int(args[0])
-            tasks = get_all_tasks()
+            guid, taskroot = args
+            taskroot = os.path.expanduser(taskroot)
+            if not os.path.exists(taskroot):
+                self._error(guid, f'[{taskroot}] not exists..')
+                return
+            if not os.path.isdir(taskroot):
+                self._error(guid, f'[{taskroot}] exists, but is not a directory..')
+                return
+            tasks = get_all_tasks(taskroot)
             self._debug('tasks', tasks)
-            dirpath = self._request(guid, 'XtaskList', tasks)
-            self.nvim.chdir(dirpath)
-            self.XtaskListFiles([guid, dirpath])
+            self._respond(guid, 'XtaskListTasks', tasks)
         except Exception as e:
             self._error(guid, e)
 

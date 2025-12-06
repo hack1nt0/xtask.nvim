@@ -1,6 +1,7 @@
 import os, json, glob, shutil, time
 from typing import Tuple, List
 
+taskroot = os.path.expanduser('~')
 conffname = os.path.join(os.path.dirname(__file__), 'conf.json')
 conf: dict = json.load(open(conffname))
 def save_conf(): open(conffname, 'w').write(json.dumps(conf, indent=4))
@@ -35,12 +36,11 @@ def get_xinfo(path: str) -> dict:
         xinfo.update(json.loads(open(fname).read()))
     return xinfo
 
-def get_all_tasks() -> List[Tuple[str,dict]]:
+def get_all_tasks(taskroot) -> List[Tuple[str,dict]]:
     cwd = os.getcwd()
-    path = task_dir
-    os.chdir(task_dir)
+    os.chdir(taskroot)
     # return [(os.path.dirname(info), json.loads(open(info).read())) for info in glob.glob(os.path.join(TASKS, '**', INFO))]
-    res = [(os.path.join(path, subdir), get_xinfo(subdir)) for subdir in os.listdir(path) if os.path.isdir(subdir)]
+    res = [(os.path.join(taskroot, subdir), get_xinfo(subdir)) for subdir in os.listdir(taskroot) if os.path.isdir(subdir)]
     os.chdir(cwd)
     return res
 
