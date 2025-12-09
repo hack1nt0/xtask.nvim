@@ -120,6 +120,23 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
+    @pynvim.function('xtask_list_files', sync=True)
+    def xtask_list_files(self, args):
+        try:
+            guid, dirpath = args
+            dirpath = os.path.expanduser(dirpath)
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+            files = []
+            for filename in glob.iglob('**/*', recursive=True):
+                if os.path.isdir(filename): continue
+                st = os.stat(filename)
+                files.append((filename, st.st_size, st.st_mode, st.st_ctime, st.st_mtime, st.st_atime))
+            os.chdir(cwd)
+            return '', files
+        except Exception as e:
+            return e, []
+
     @pynvim.function('XtaskGrepFiles', sync=True)
     def XtaskGrepFiles(self, args):
         try:
@@ -183,7 +200,7 @@ class Plugin(object):
     #     except Exception as e:
     #         self._error(guid, e)
 
-    @pynvim.function('XtaskListTasks')
+    @pynvim.function('XtaskListTasks', sync=True)
     def XtaskListTasks(self, args):
         try:
             guid, taskroot = args
@@ -199,6 +216,21 @@ class Plugin(object):
             self._respond(guid, 'XtaskListTasks', tasks)
         except Exception as e:
             self._error(guid, e)
+
+    @pynvim.function('xtask_list_tasks', sync=True)
+    def xtask_list_tasks(self, args):
+        try:
+            taskhome = args
+            taskhome = os.path.expanduser(taskhome)
+            if not os.path.exists(taskhome):
+                return f'[{taskhome}] not exists..', []
+            if not os.path.isdir(taskhome):
+                return f'[{taskhome}] exists, but is not a directory..', []
+            tasks = get_all_tasks(taskhome)
+            self._debug('tasks', tasks)
+            return '', tasks
+        except Exception as e:
+            return e, []
 
     # @pynvim.command('XtaskRequestInfo', nargs=1)
     # def XtaskRequestInfo(self):
