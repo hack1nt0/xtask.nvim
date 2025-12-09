@@ -123,7 +123,7 @@ class Plugin(object):
     @pynvim.function('XtaskListFiles', sync=True)
     def XtaskListFiles(self, args):
         try:
-            guid, dirpath = args
+            dirpath = args[0]
             dirpath = os.path.expanduser(dirpath)
             cwd = os.getcwd()
             os.chdir(dirpath)
@@ -220,7 +220,7 @@ class Plugin(object):
     @pynvim.function('XtaskListTasks', sync=True)
     def XtaskListTasks(self, args):
         try:
-            taskhome = args
+            taskhome = args[0]
             taskhome = os.path.expanduser(taskhome)
             if not os.path.exists(taskhome):
                 return f'[{taskhome}] not exists..', []
