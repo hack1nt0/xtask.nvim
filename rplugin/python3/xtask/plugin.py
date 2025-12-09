@@ -103,8 +103,8 @@ class Plugin(object):
     #     except Exception as e:
     #         self._error(guid, e)
 
-    @pynvim.function('XtaskListFiles', sync=True)
-    def XtaskListFiles(self, args):
+    @pynvim.function('XtaskListFilesAsync', sync=True)
+    def XtaskListFilesAsync(self, args):
         try:
             guid, dirpath = args
             dirpath = os.path.expanduser(dirpath)
@@ -120,8 +120,8 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
-    @pynvim.function('xtask_list_files', sync=True)
-    def xtask_list_files(self, args):
+    @pynvim.function('XtaskListFiles', sync=True)
+    def XtaskListFiles(self, args):
         try:
             guid, dirpath = args
             dirpath = os.path.expanduser(dirpath)
@@ -200,8 +200,8 @@ class Plugin(object):
     #     except Exception as e:
     #         self._error(guid, e)
 
-    @pynvim.function('XtaskListTasks', sync=True)
-    def XtaskListTasks(self, args):
+    @pynvim.function('XtaskListTasksAsync', sync=True)
+    def XtaskListTasksAsync(self, args):
         try:
             guid, taskroot = args
             taskroot = os.path.expanduser(taskroot)
@@ -217,8 +217,8 @@ class Plugin(object):
         except Exception as e:
             self._error(guid, e)
 
-    @pynvim.function('xtask_list_tasks', sync=True)
-    def xtask_list_tasks(self, args):
+    @pynvim.function('XtaskListTasks', sync=True)
+    def XtaskListTasks(self, args):
         try:
             taskhome = args
             taskhome = os.path.expanduser(taskhome)
